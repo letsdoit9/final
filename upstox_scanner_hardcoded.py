@@ -827,10 +827,9 @@ def main():
     access_token = st.sidebar.text_input("Upstox Access Token", type="password")
     
     # Show hardcoded stocks info
-    st.sidebar.subheader("📊 Hardcoded Stocks")
     df_instruments = load_hardcoded_stocks()
-    st.sidebar.info(f"Using {len(df_instruments)} predefined stocks:\n" + 
-                   "\n".join([f"• {symbol}" for symbol in df_instruments['tradingsymbol'].tolist()]))
+# Removed sidebar display of hardcoded stock list
+
     
     col1, col2 = st.sidebar.columns(2)
     with col1:
