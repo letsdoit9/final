@@ -2,13 +2,5 @@ streamlit
 pandas
 numpy
 yfinance
-requests
 aiohttp
-asyncio
 numba
-polars
-warnings
-datetime
-time
-json
-concurrent.futures
