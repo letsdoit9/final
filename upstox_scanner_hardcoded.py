@@ -775,11 +775,16 @@ def process_single_stock_optimized(args):
         if conditions >= min_conditions:
             atr = values[13]
             return {
-                'Symbol': symbol, 'CMP (₹)': round(price, 2), 'Volume': int(volume),
-                'ATR (₹)': round(atr, 2), 'Target 1 (₹)': round(price + (1.5 * atr), 2),
+                'Symbol': symbol,
+                'CMP (₹)': round(price, 2),
+                'Volume': int(volume),
+                'ATR (₹)': round(atr, 2),
+                'Target 1 (₹)': round(price + (1.5 * atr), 2),
                 'Target 2 (₹)': round(price + (2.0 * atr), 2),
                 'Stoploss (₹)': round(price - (1.0 * atr), 2),
-                'Conditions': f"{conditions}/16", 'Score': round(score, 2)
+                'Conditions': f"{conditions}/16",
+                'Score': round(score, 2),
+                'Entry_Date': datetime.today().date()
             }
     except:
         pass
@@ -830,7 +835,6 @@ def main():
     df_instruments = load_hardcoded_stocks()
 # Removed sidebar display of hardcoded stock list
 
-    
     col1, col2 = st.sidebar.columns(2)
     with col1:
         min_conditions = st.slider("Min Conditions", 1, 16, 10)
