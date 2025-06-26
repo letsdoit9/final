@@ -544,6 +544,7 @@ st.set_page_config(page_title="Upstox Scanner Ultra", page_icon="🚀", layout="
 st.markdown("""<style>
 .main-header{font-size:2.5rem;font-weight:bold;color:#1f77b4;text-align:center;margin-bottom:2rem;}
 .metric-card{background-color:#f0f2f6;padding:1rem;border-radius:0.5rem;margin:0.5rem 0;}
+.upload-section{background-color:#f8f9fa;padding:1rem;border-radius:0.5rem;margin:1rem 0;}
 </style>""", unsafe_allow_html=True)
 
 # Cache for historical data
@@ -824,6 +825,51 @@ def load_hardcoded_stocks():
             pass
     return pd.read_csv(StringIO(DEFAULT_STOCKS), dtype=str).dropna().reset_index(drop=True)
 
+def validate_csv_format(df):
+    """Validate uploaded CSV format"""
+    required_columns = ['instrument_key', 'tradingsymbol']
+    
+    # Check if required columns exist
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        return False, f"Missing required columns: {', '.join(missing_columns)}"
+    
+    # Check for empty values
+    if df['instrument_key'].isna().any() or df['tradingsymbol'].isna().any():
+        return False, "Found empty values in required columns"
+    
+    # Check instrument_key format (basic validation)
+    invalid_keys = df[~df['instrument_key'].str.contains('NSE_EQ|', na=False)]
+    if len(invalid_keys) > 0:
+        return False, f"Invalid instrument_key format found. Expected format: NSE_EQ|INE123456789"
+    
+    return True, "CSV format is valid"
+
+def load_stocks_from_source(use_uploaded_csv, uploaded_file):
+    """Load stocks from either uploaded CSV or hardcoded data"""
+    if use_uploaded_csv and uploaded_file is not None:
+        try:
+            # Read uploaded CSV
+            df = pd.read_csv(uploaded_file, dtype=str)
+            df = df.dropna().reset_index(drop=True)
+            
+            # Validate format
+            is_valid, message = validate_csv_format(df)
+            if not is_valid:
+                st.error(f"❌ CSV Validation Error: {message}")
+                return None, None
+            
+            st.success(f"✅ Successfully loaded {len(df)} stocks from uploaded CSV")
+            return df, "uploaded"
+            
+        except Exception as e:
+            st.error(f"❌ Error reading uploaded CSV: {str(e)}")
+            return None, None
+    else:
+        # Use hardcoded stocks
+        df = load_hardcoded_stocks()
+        return df, "hardcoded"
+
 def main():
     st.markdown('<h1 class="main-header">🚀 Upstox Technical Scanner Ultra</h1>', unsafe_allow_html=True)
     
@@ -831,10 +877,60 @@ def main():
     st.sidebar.header("⚡ Configuration")
     access_token = st.sidebar.text_input("Upstox Access Token", type="password")
     
-    # Show hardcoded stocks info
-    df_instruments = load_hardcoded_stocks()
-# Removed sidebar display of hardcoded stock list
-
+    # CSV Upload Section
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📊 Stock Data Source")
+    
+    use_uploaded_csv = st.sidebar.radio(
+        "Choose stock data source:",
+        ["Use Hardcoded Stocks", "Upload Custom CSV"],
+        index=0
+    ) == "Upload Custom CSV"
+    
+    uploaded_file = None
+    if use_uploaded_csv:
+        st.sidebar.markdown('<div class="upload-section">', unsafe_allow_html=True)
+        uploaded_file = st.sidebar.file_uploader(
+            "Upload CSV file",
+            type=['csv'],
+            help="CSV should contain 'instrument_key' and 'tradingsymbol' columns"
+        )
+        
+        # Show CSV format requirements
+        with st.sidebar.expander("📋 CSV Format Requirements"):
+            st.markdown("""
+            **Required Columns:**
+            - `instrument_key`: NSE instrument key (e.g., NSE_EQ|INE585B01010)
+            - `tradingsymbol`: Stock symbol (e.g., MARUTI)
+            
+            **Example CSV:**
+            ```
+            instrument_key,tradingsymbol
+            NSE_EQ|INE585B01010,MARUTI
+            NSE_EQ|INE139A01034,NATIONALUM
+            ```
+            """)
+        st.sidebar.markdown('</div>', unsafe_allow_html=True)
+    
+    # Load stocks based on selection
+    df_instruments, data_source = load_stocks_from_source(use_uploaded_csv, uploaded_file)
+    
+    if df_instruments is None:
+        st.error("❌ No stock data available. Please check your data source.")
+        return
+    
+    # Show loaded data info
+    if data_source == "uploaded":
+        st.sidebar.success(f"✅ Using uploaded CSV ({len(df_instruments)} stocks)")
+    else:
+        st.sidebar.info(f"ℹ️ Using hardcoded stocks ({len(df_instruments)} stocks)")
+    
+    # Show sample data
+    with st.sidebar.expander("👀 Preview Stock Data"):
+        st.dataframe(df_instruments.head(10), use_container_width=True)
+    
+    # Configuration parameters
+    st.sidebar.markdown("---")
     col1, col2 = st.sidebar.columns(2)
     with col1:
         min_conditions = st.slider("Min Conditions", 1, 16, 10)
@@ -859,13 +955,13 @@ def main():
         
         start_time = time.time()
         
-        # Load hardcoded stocks
+        # Prepare instrument data
         try:
             instrument_keys = df_instruments["instrument_key"].str.strip().tolist()
             symbol_map = df_instruments.set_index("instrument_key")["tradingsymbol"].to_dict()
-            st.success(f"✅ Loaded {len(instrument_keys)} hardcoded instruments")
+            st.success(f"✅ Loaded {len(instrument_keys)} instruments from {data_source} source")
         except Exception as e:
-            st.error(f"❌ Error loading hardcoded stocks: {e}")
+            st.error(f"❌ Error preparing instrument data: {e}")
             return
         
         # Fetch quotes asynchronously
