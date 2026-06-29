@@ -548,7 +548,7 @@ GREEN_API_INSTANCE_ID = "710701668156"       # e.g. "1101234567"
 GREEN_API_TOKEN       = "4c7003de664449d496f032a4ce98773cfa9e85b9c2e9425d9d"       # e.g. "abcdef1234567890abcdef"
 
 # Fill one or both targets:
-WHATSAPP_PERSONAL_CHAT_ID = "919766788221"  # e.g. "919876543210@c.us"
+WHATSAPP_PERSONAL_CHAT_ID = ""  # e.g. "919876543210@c.us"
 WHATSAPP_GROUP_CHAT_ID    = "120363410390351067@g.us"  # e.g. "120363XXXXXXXXXX@g.us"
 
 async def _green_api_send(session: aiohttp.ClientSession, chat_id: str, message: str, label: str):
