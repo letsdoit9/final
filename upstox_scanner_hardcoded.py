@@ -7,7 +7,7 @@ import aiohttp
 from datetime import datetime, timedelta
 import time
 import warnings
-import numba
+#import numba
 import json
 from io import StringIO
 try:
