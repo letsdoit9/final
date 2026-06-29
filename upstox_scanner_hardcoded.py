@@ -903,31 +903,60 @@ def format_telegram_message(qualifying_stocks):
 
 def format_whatsapp_message(qualifying_stocks):
     """
-    Format results for WhatsApp via Green API.
-    WhatsApp formatting:
-      *text*  = Bold
-    Color coding via emoji:
-      🔵 CMP  = Blue (bold)
-      🟢 T1   = Green (bold)
-      🔴 SL   = Red (bold)
-    Messages >4096 chars are split automatically by send logic.
+    Format results for WhatsApp via Green API — Premium Elite Swing Scanner layout.
+    WhatsApp bold: *text*
+    Ranking: 🥇🥈🥉 for top 3, 🏅 for rest.
     """
+    RANK_EMOJIS = ["🥇", "🥈", "🥉"]
+
     if not qualifying_stocks:
-        return "📊 Scanner Results\n\n❌ No stocks found matching criteria"
+        return "📊 *UPSTOX ELITE SWING SCANNER*\n\n❌ No stocks found matching criteria"
 
     sorted_stocks = sorted(qualifying_stocks, key=lambda x: x['Score'], reverse=True)
+
+    top_cond = sorted_stocks[0]['Conditions']
+    now      = datetime.now()
+
     lines = [
-        f"📊 *Upstox Scanner Results*",
-        f"✅ {len(sorted_stocks)} stocks found | 16 conditions",
-        f"🕐 {datetime.now().strftime('%d-%b-%Y %H:%M:%S')}",
-        "─────────────────────",
+        "📊 *UPSTOX ELITE SWING SCANNER*",
+        f"🕒 {now.strftime('%d %b %Y | %H:%M')}",
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        f"🏆 *TOP PICKS ({top_cond} Conditions)*",
+        "",
     ]
-    for i, stock in enumerate(sorted_stocks, 1):
-        lines.append(
-            f"{i}. *{stock['Symbol']}*  ({stock['Conditions']})\n"
-            f"   🔵 *CMP: ₹{stock['CMP (₹)']}*  |  🟢 *T1: ₹{stock['Target 1 (₹)']}*  |  🔴 *SL: ₹{stock['Stoploss (₹)']}*"
-        )
-    lines.append("─────────────────────")
+
+    for i, stock in enumerate(sorted_stocks):
+        rank   = RANK_EMOJIS[i] if i < len(RANK_EMOJIS) else "🏅"
+        symbol = stock['Symbol']
+        cmp_   = stock['CMP (₹)']
+        target = stock['Target 1 (₹)']
+        sl     = stock['Stoploss (₹)']
+        cond   = stock['Conditions']
+
+        try:
+            met, total = cond.split('/')
+            score_pct  = (int(met) / int(total)) * 100
+        except Exception:
+            score_pct  = 0.0
+
+        upside   = ((target - cmp_) / cmp_) * 100 if cmp_ else 0
+        downside = ((cmp_ - sl)    / cmp_) * 100 if cmp_ else 0
+
+        risk   = cmp_ - sl
+        reward = target - cmp_
+        rr     = round(reward / risk, 1) if risk > 0 else 0.0
+
+        lines += [
+            f"{rank} *{symbol}*",
+            f"✅ Score: {score_pct:.1f}%",
+            f"💰 CMP : ₹{cmp_:.2f}",
+            f"🎯 Target : ₹{target:.2f} (+{upside:.2f}%)",
+            f"🛑 Stoploss : ₹{sl:.2f} (-{downside:.2f}%)",
+            f"📈 R:R : {rr} : 1",
+            "",
+        ]
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     return "\n".join(lines)
 
 def load_hardcoded_stocks():
