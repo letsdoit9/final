@@ -866,8 +866,13 @@ def format_telegram_message(qualifying_stocks):
 
 def format_whatsapp_message(qualifying_stocks):
     """
-    Format results for WhatsApp via CallMeBot.
-    CallMeBot supports plain text; keep it clean and readable.
+    Format results for WhatsApp via Green API.
+    WhatsApp formatting:
+      *text*  = Bold
+    Color coding via emoji:
+      🔵 CMP  = Blue (bold)
+      🟢 T1   = Green (bold)
+      🔴 SL   = Red (bold)
     Messages >4096 chars are split automatically by send logic.
     """
     if not qualifying_stocks:
@@ -882,8 +887,8 @@ def format_whatsapp_message(qualifying_stocks):
     ]
     for i, stock in enumerate(sorted_stocks, 1):
         lines.append(
-            f"{i}. {stock['Symbol']}  ({stock['Conditions']})\n"
-            f"   CMP: ₹{stock['CMP (₹)']}  |  T1: ₹{stock['Target 1 (₹)']}  |  SL: ₹{stock['Stoploss (₹)']}"
+            f"{i}. *{stock['Symbol']}*  ({stock['Conditions']})\n"
+            f"   🔵 *CMP: ₹{stock['CMP (₹)']}*  |  🟢 *T1: ₹{stock['Target 1 (₹)']}*  |  🔴 *SL: ₹{stock['Stoploss (₹)']}*"
         )
     lines.append("─────────────────────")
     return "\n".join(lines)
