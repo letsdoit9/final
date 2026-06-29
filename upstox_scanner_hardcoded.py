@@ -7,7 +7,7 @@ import aiohttp
 from datetime import datetime, timedelta
 import time
 import warnings
-#import numba
+# numba removed - using pure numpy instead
 import json
 from io import StringIO
 try:
@@ -561,9 +561,9 @@ def get_cached_historical_data(symbol, period="1y"):
     except:
         return None
 
-# Numba optimized calculations
-@numba.jit(nopython=True, cache=True)
+# Pure numpy calculations (numba removed for Python 3.13 compatibility)
 def fast_ema_calculation(prices, period):
+    prices = np.asarray(prices, dtype=np.float64)
     alpha = 2.0 / (period + 1.0)
     ema = np.empty_like(prices)
     ema[0] = prices[0]
@@ -571,8 +571,8 @@ def fast_ema_calculation(prices, period):
         ema[i] = alpha * prices[i] + (1 - alpha) * ema[i-1]
     return ema
 
-@numba.jit(nopython=True, cache=True)
 def fast_rsi_calculation(prices, period=14):
+    prices = np.asarray(prices, dtype=np.float64)
     if len(prices) < period + 1:
         return np.full(len(prices), 50.0)
     deltas = np.diff(prices)
@@ -586,11 +586,11 @@ def fast_rsi_calculation(prices, period=14):
     result[period:] = rsi
     return result
 
-@numba.jit(nopython=True, cache=True)
 def fast_stochrsi_calculation(rsi, period=14):
+    rsi = np.asarray(rsi, dtype=np.float64)
     if len(rsi) < period:
         return np.full(len(rsi), 50.0)
-    stochrsi = np.empty_like(rsi)
+    stochrsi = np.full(len(rsi), 50.0)
     for i in range(period-1, len(rsi)):
         rsi_slice = rsi[i-period+1:i+1]
         min_rsi = np.min(rsi_slice)
@@ -599,11 +599,12 @@ def fast_stochrsi_calculation(rsi, period=14):
             stochrsi[i] = 100 * (rsi[i] - min_rsi) / (max_rsi - min_rsi)
         else:
             stochrsi[i] = 50.0
-    stochrsi[:period-1] = 50.0
     return stochrsi
 
-@numba.jit(nopython=True, cache=True)
 def fast_atr_calculation(high, low, close, period=14):
+    high = np.asarray(high, dtype=np.float64)
+    low = np.asarray(low, dtype=np.float64)
+    close = np.asarray(close, dtype=np.float64)
     if len(high) < period:
         return np.full(len(high), 0.5)
     tr = np.empty(len(high))
@@ -615,8 +616,8 @@ def fast_atr_calculation(high, low, close, period=14):
     result[period-1:] = atr
     return result
 
-@numba.jit(nopython=True, cache=True)
 def fast_sma_calculation(prices, period):
+    prices = np.asarray(prices, dtype=np.float64)
     if len(prices) < period:
         return np.full(len(prices), np.mean(prices))
     sma = np.convolve(prices, np.ones(period)/period, mode='valid')
@@ -667,7 +668,6 @@ def calculate_indicators_ultra_fast(data):
     
     return df
 
-@numba.jit(nopython=True, cache=True)
 def check_conditions_vectorized(price, ema5, ema13, ema26, sma50, sma100, sma200, rsi, stochrsi, 
                                macd, macd_signal, volume, vol_sma50, atr, bb_upper, high_200, 
                                high_52w, open_price, low, prev_high, prev_close, high_current, weights):
