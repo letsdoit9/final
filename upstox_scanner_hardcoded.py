@@ -842,27 +842,64 @@ def process_single_stock_optimized(args):
     return None
 
 def format_telegram_message(qualifying_stocks):
-    """Format results for Telegram message"""
+    """Format results for Telegram with premium Elite Swing Scanner layout."""
     if not qualifying_stocks:
-        return "**Scanner Results**\n\n❌ No stocks found matching criteria"
-    
-    msg = f"**Scanner Results**\n\n✅ **{len(qualifying_stocks)}** stocks found (16 conditions)\n\n"
-    
-    # Sort by score and show ALL stocks
+        return "📊 *UPSTOX ELITE SWING SCANNER*\n\n❌ No stocks found matching criteria"
+
+    # Ranking emojis: 🥇🥈🥉 then 🏅 for rest
+    RANK_EMOJIS = ["🥇", "🥈", "🥉"]
+
     sorted_stocks = sorted(qualifying_stocks, key=lambda x: x['Score'], reverse=True)
-    
-    for i, stock in enumerate(sorted_stocks, 1):
-        symbol = stock['Symbol']
-        score = stock['Conditions']
-        entry = stock['CMP (₹)']
-        target = stock['Target 1 (₹)']
-        sl = stock['Stoploss (₹)']
-        
-        msg += f"{i}. **{symbol}** ({score})\n"
-        msg += f"   Entry: ₹{entry} | Target: ₹{target} | SL: ₹{sl}\n\n"
-    
-    msg += f"🕐 Scanned at {datetime.now().strftime('%H:%M:%S')}"
-    return msg
+
+    # Determine the condition threshold shown in header from top stock
+    top_conditions = sorted_stocks[0]['Conditions'] if sorted_stocks else "?/16"
+
+    now = datetime.now()
+    header = (
+        f"📊 *UPSTOX ELITE SWING SCANNER*\n"
+        f"🕒 {now.strftime('%d %b %Y | %H:%M')}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🏆 *TOP PICKS ({top_conditions} Conditions)*\n"
+    )
+
+    blocks = []
+    for i, stock in enumerate(sorted_stocks):
+        rank_emoji = RANK_EMOJIS[i] if i < len(RANK_EMOJIS) else "🏅"
+
+        symbol   = stock['Symbol']
+        cmp_     = stock['CMP (₹)']
+        target   = stock['Target 1 (₹)']
+        sl       = stock['Stoploss (₹)']
+        cond_str = stock['Conditions']          # e.g. "14/16"
+
+        # Score percentage
+        try:
+            met, total = cond_str.split('/')
+            score_pct = (int(met) / int(total)) * 100
+        except Exception:
+            score_pct = 0.0
+
+        # Upside / downside %
+        upside   = ((target - cmp_) / cmp_) * 100 if cmp_ else 0
+        downside = ((cmp_ - sl) / cmp_) * 100 if cmp_ else 0
+
+        # Risk : Reward  (reward / risk, rounded to 1 dp)
+        risk   = cmp_ - sl
+        reward = target - cmp_
+        rr     = round(reward / risk, 1) if risk > 0 else 0.0
+
+        block = (
+            f"{rank_emoji} *{symbol}*\n"
+            f"✅ Score: {score_pct:.1f}%\n"
+            f"💰 CMP : ₹{cmp_:.2f}\n"
+            f"🎯 Target : ₹{target:.2f} (+{upside:.2f}%)\n"
+            f"🛑 Stoploss : ₹{sl:.2f} (-{downside:.2f}%)\n"
+            f"📈 R:R : {rr} : 1"
+        )
+        blocks.append(block)
+
+    separator = "\n\n" + "─" * 22 + "\n\n"
+    return header + "\n" + separator.join(blocks) + "\n\n━━━━━━━━━━━━━━━━━━━━━━"
 
 def format_whatsapp_message(qualifying_stocks):
     """
